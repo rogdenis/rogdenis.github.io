@@ -42,15 +42,11 @@ str(testing)
 As we can see most columns are useless in the testing set, so we select only those, which can be useful.
 
 ```{r}
-library(caret)
+
 #select only useful columns by name and regular expression
 trainingset<-training[,c(names(training)[grepl(pattern="_(x|y|z)$|^(roll|pitch|yaw)",names(training))],"classe","user_name","new_window")]
-
-#split data into testing and training
-intrain <- createDataPartition(y=trainingset$classe,p=0.8,list=F)
-training_split <- subset(trainingset[intrain,],select=-c(classe))
-testing_split <- trainingset[-intrain,]
 ```
+
 
 
 **Now it is time to try several methods**
@@ -63,6 +59,14 @@ Currently we are using not very powerful laptop, so we are not going to try too 
 * Boosted Logistic Regression
 * ROC-Based Classifier
 * c45
+
+```{r}
+library(caret)
+#split data into testing and training
+intrain <- createDataPartition(y=trainingset$classe,p=0.8,list=F)
+training_split <- trainingset[intrain,]
+testing_split <- trainingset[-intrain,]
+```
 
 ```{r cache=TRUE}
 set.seed(1234)
@@ -101,28 +105,28 @@ bwplot(resamps, layout = c(2, 1))
 accuracyResult[-1,]
 ```
 
-As we can see, we have a leader: Logistic Model Trees (LMT)
+As we can see, we have a leader: Logistic Model Trees (LMT). But it is too slow in comparison with C4.5 model, that is why we are going to tune C4.5
 
 **Tuning parameters**
 
-Now we will try to get maximun from LMT by tuning its parameter in cross-validation
-LMT has one tuning paraneter - iter. We'll use it
+Now we will try to get maximun from C4.5 by tuning its parameter in cross-validation
+C4.5 has one tuning paraneter - C. We'll use it
 
 ```{r cache=TRUE}
 #create grid for iter
-LMTGrid <-  expand.grid(iter = seq(1,100,10))
+C45Grid <-  expand.grid(C = seq(0.2,0.3,0.01))
 #set cross validation
-ctrl <- trainControl(method = "cv", number = 9)
-if (file.exists("LMT_tuning.rda")){
-  load("LMT_tuning.rda")
+ctrl <- trainControl(method = "cv", number = 10)
+if (file.exists("C45_tuning.rda")){
+  load("C45_tuning.rda")
 } else {
-  LMT_CV <- train(training_split,training_split$classe,method = "LMT",trControl = ctrl,tuneGrid=LMTGrid)
+  C45_CV <- train(subset(training_split,select=-c(classe)),training_split$classe,method = "J48",trControl = ctrl,tuneGrid = C45Grid)
 }
 
 ```
 
 ```{r}
-LMT_CV
+C45_CV
 ```
 
 **calculate out of sample error**
@@ -130,7 +134,9 @@ LMT_CV
 We use confusion matrix
 
 ```{r cache=TRUE}
+predict<-predict(C45_CV,testing_split)
+confusionMatrix(predict,testing_split$classe)
 
 ```
 
-looks like ins testing split we get the result similar to cross-validation. We will use this model
+looks like ins testing split we get the result similar to cross-validation. And we have 95 confidence that our accuracy is higher than 95%. We will use this model for future predictions

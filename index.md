@@ -163,7 +163,7 @@ trainingset<-training[,c(names(training)[grepl(pattern="_(x|y|z)$|^(roll|pitch|y
 
 #split data into testing and training
 intrain <- createDataPartition(y=trainingset$classe,p=0.8,list=F)
-training_split <- subset(trainingset[intrain,],select=-c(classe))
+training_split <- trainingset[intrain,]
 testing_split <- trainingset[-intrain,]
 ```
 
@@ -225,59 +225,60 @@ accuracyResult[-1,]
 ## 7        J48 0.950269597110398
 ```
 
-As we can see, we have a leader: Logistic Model Trees (LMT)
+As we can see, we have a leader: Logistic Model Trees (LMT). But it is too slow in comparison with C4.5 model, that is why we are going to tune C4.5
 
 **Tuning parameters**
 
-Now we will try to get maximun from LMT by tuning its parameter in cross-validation
-LMT has one tuning paraneter - iter. We'll use it
+Now we will try to get maximun from C4.5 by tuning its parameter in cross-validation
+C4.5 has one tuning paraneter - C. We'll use it
 
 
 ```r
 #create grid for iter
-LMTGrid <-  expand.grid(iter = seq(1,100,10))
+C45Grid <-  expand.grid(C = seq(0.2,0.3,0.01))
 #set cross validation
-ctrl <- trainControl(method = "cv", number = 9)
-if (file.exists("LMT_tuning.rda")){
-  load("LMT_tuning.rda")
+ctrl <- trainControl(method = "cv", number = 10)
+if (file.exists("C45_tuning.rda")){
+  load("C45_tuning.rda")
 } else {
-  LMT_CV <- train(training_split,training_split$classe,method = "LMT",trControl = ctrl,tuneGrid=LMTGrid)
+  C45_CV <- train(subset(training_split,select=-c(classe)),training_split$classe,method = "J48",trControl = ctrl,tuneGrid = C45Grid)
 }
 ```
 
 
 ```r
-LMT_CV
+C45_CV
 ```
 
 ```
-## Logistic Model Trees 
+## C4.5-like Trees 
 ## 
-## 11776 samples
+## 15699 samples
 ##    50 predictors
 ##     5 classes: 'A', 'B', 'C', 'D', 'E' 
 ## 
 ## No pre-processing
-## Resampling: Cross-Validated (9 fold) 
+## Resampling: Cross-Validated (10 fold) 
 ## 
-## Summary of sample sizes: 10469, 10469, 10468, 10467, 10468, 10468, ... 
+## Summary of sample sizes: 14129, 14130, 14131, 14129, 14127, 14129, ... 
 ## 
 ## Resampling results across tuning parameters:
 ## 
-##   iter  Accuracy  Kappa  Accuracy SD  Kappa SD
-##   1     1         1      0.007        0.008   
-##   10    1         1      0.009        0.01    
-##   20    1         1      0.008        0.01    
-##   30    1         1      0.009        0.01    
-##   40    1         1      0.005        0.006   
-##   50    1         1      0.005        0.006   
-##   60    1         1      0.006        0.008   
-##   70    1         1      0.01         0.02    
-##   80    1         1      0.006        0.008   
-##   90    1         1      0.006        0.008   
+##   C    Accuracy  Kappa  Accuracy SD  Kappa SD
+##   0.2  1         0.9    0.005        0.006   
+##   0.2  1         0.9    0.005        0.006   
+##   0.2  1         0.9    0.005        0.006   
+##   0.2  1         0.9    0.005        0.006   
+##   0.2  1         0.9    0.005        0.006   
+##   0.2  1         0.9    0.005        0.006   
+##   0.3  1         0.9    0.005        0.006   
+##   0.3  1         0.9    0.005        0.006   
+##   0.3  1         0.9    0.005        0.006   
+##   0.3  1         0.9    0.005        0.006   
+##   0.3  1         0.9    0.005        0.006   
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
-## The final value used for the model was iter = 51.
+## The final value used for the model was C = 0.3.
 ```
 
 **calculate out of sample error**
@@ -285,5 +286,43 @@ LMT_CV
 We use confusion matrix
 
 
+```r
+predict<-predict(C45_CV,testing_split)
+confusionMatrix(predict,testing_split$classe)
+```
 
-looks like ins testing split we get the result similar to cross-validation. We will use this model
+```
+## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1083   11    2    7    2
+##          B   15  715   16    6    7
+##          C    7   14  655   22    5
+##          D    7   10    9  600    5
+##          E    4    9    2    8  702
+## 
+## Overall Statistics
+##                                        
+##                Accuracy : 0.957        
+##                  95% CI : (0.95, 0.963)
+##     No Information Rate : 0.284        
+##     P-Value [Acc > NIR] : <2e-16       
+##                                        
+##                   Kappa : 0.946        
+##  Mcnemar's Test P-Value : 0.231        
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity             0.970    0.942    0.958    0.933    0.974
+## Specificity             0.992    0.986    0.985    0.991    0.993
+## Pos Pred Value          0.980    0.942    0.932    0.951    0.968
+## Neg Pred Value          0.988    0.986    0.991    0.987    0.994
+## Prevalence              0.284    0.193    0.174    0.164    0.184
+## Detection Rate          0.276    0.182    0.167    0.153    0.179
+## Detection Prevalence    0.282    0.193    0.179    0.161    0.185
+## Balanced Accuracy       0.981    0.964    0.971    0.962    0.983
+```
+
+looks like ins testing split we get the result similar to cross-validation. And we have 95.86% confidence that our accuracy is higher than 97%. We will use this model for future predictions
