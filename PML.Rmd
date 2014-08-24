@@ -1,0 +1,136 @@
+Prediction Assignment Writeup
+========================================================
+
+Our goal is to train the model that predicts classe of activity and use it to predict activity in the testing data frame. We get the inspiration from process described on the caret web page http://topepo.github.io/caret/training.html and the lectures.
+
+So, our steps will be:
+
+1. Obtaining the data
+2. Selecting features for training
+3. Try couple of methods
+4. Tune parameters for the most promising
+5. Calculate the error of final model on testing set
+6. Predict classes for testing data frame
+
+**obtaining the data**
+
+```{r cache=TRUE}
+library(RCurl)
+
+if(!file.exists("pml-training.csv")){
+  data <- getURL("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv",ssl.verifypeer=0L,followlocation=1L)
+  writeLines(data,'pml-training.csv')
+}
+
+if(!file.exists("pml-testing.csv")){
+  data <- getURL("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv",ssl.verifypeer=0L,followlocation=1L)
+  writeLines(data,'pml-testing.csv')
+}
+
+training<-read.csv("pml-training.csv")
+testing<-read.csv("pml-testing.csv")
+```
+
+**Select useful features and make training and testing data set**
+
+Let's take a look at testing data frame columns:
+
+```{r}
+str(testing)
+```
+
+As we can see most columns are useless in the testing set, so we select only those, which can be useful.
+
+```{r}
+library(caret)
+#select only useful columns by name and regular expression
+trainingset<-training[,c(names(training)[grepl(pattern="_(x|y|z)$|^(roll|pitch|yaw)",names(training))],"classe","user_name","new_window")]
+
+#split data into testing and training
+intrain <- createDataPartition(y=trainingset$classe,p=0.8,list=F)
+training_split <- subset(trainingset[intrain,],select=-c(classe))
+testing_split <- trainingset[-intrain,]
+```
+
+
+**Now it is time to try several methods**
+
+We are trying to predict multiclass object, and most of classification methods do not support it.
+Currently we are using not very powerful laptop, so we are not going to try too demanding methods like RandomForests. We will try different methods that can do multiclassification and from different areas:
+* NaiveBayes
+* Logistic Model Trees
+* Linear Discriminant Analysis
+* Boosted Logistic Regression
+* ROC-Based Classifier
+* c45
+
+```{r cache=TRUE}
+set.seed(1234)
+library(caret)
+library(klaR)
+library(RWeka)
+library(MASS)
+library(caTools)
+library(caTools)
+library(caTools)
+
+accuracyResult<-data.frame(model=c("none"),Accuracy=c(0),stringsAsFactors = FALSE)
+
+methods<-c(LMT="LMT",nb="NB",lda="lda",LogitBoost="logboost",rocc="roc",J48="c45")
+
+for (k in names(methods)){
+  if (file.exists(paste(k,"rda",sep="."))){
+    load(paste(k,"rda",sep="."))
+    model<-get(methods[k])
+  }  else {
+    model<-train(training_split[,1:(ncol(testing_split)-1)],training_split$classe,method = k)
+  }
+  accuracyResult<-rbind(accuracyResult,c(k,model$results$Accuracy))
+}
+RL<-list()
+for (k in methods){
+  RL[[k]]=get(k)
+}
+resamps<-resamples(RL)
+```
+```{r fig.width=5, fig.height=4, echo=FALSE}
+bwplot(resamps, layout = c(2, 1))
+
+```
+```{r}
+accuracyResult[-1,]
+```
+
+As we can see, we have a leader: Logistic Model Trees (LMT)
+
+**Tuning parameters**
+
+Now we will try to get maximun from LMT by tuning its parameter in cross-validation
+LMT has one tuning paraneter - iter. We'll use it
+
+```{r cache=TRUE}
+#create grid for iter
+LMTGrid <-  expand.grid(iter = seq(1,100,10))
+#set cross validation
+ctrl <- trainControl(method = "cv", number = 9)
+if (file.exists("LMT_tuning.rda")){
+  load("LMT_tuning.rda")
+} else {
+  LMT_CV <- train(training_split,training_split$classe,method = "LMT",trControl = ctrl,tuneGrid=LMTGrid)
+}
+
+```
+
+```{r}
+LMT_CV
+```
+
+**calculate out of sample error**
+
+We use confusion matrix
+
+```{r cache=TRUE}
+
+```
+
+looks like ins testing split we get the result similar to cross-validation. We will use this model
