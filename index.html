@@ -324,20 +324,8 @@ testing&lt;-read.csv(&quot;pml-testing.csv&quot;)
 
 <p>As we can see most columns are useless in the testing set, so we select only those, which can be useful.</p>
 
-<pre><code class="r">library(caret)
-</code></pre>
-
-<pre><code>## Loading required package: lattice
-## Loading required package: ggplot2
-</code></pre>
-
 <pre><code class="r">#select only useful columns by name and regular expression
 trainingset&lt;-training[,c(names(training)[grepl(pattern=&quot;_(x|y|z)$|^(roll|pitch|yaw)&quot;,names(training))],&quot;classe&quot;,&quot;user_name&quot;,&quot;new_window&quot;)]
-
-#split data into testing and training
-intrain &lt;- createDataPartition(y=trainingset$classe,p=0.8,list=F)
-training_split &lt;- trainingset[intrain,]
-testing_split &lt;- trainingset[-intrain,]
 </code></pre>
 
 <p><strong>Now it is time to try several methods</strong></p>
@@ -353,6 +341,13 @@ Currently we are using not very powerful laptop, so we are not going to try too 
 <li>ROC-Based Classifier</li>
 <li>c45</li>
 </ul>
+
+<pre><code class="r">library(caret)
+#split data into testing and training
+intrain &lt;- createDataPartition(y=trainingset$classe,p=0.8,list=F)
+training_split &lt;- trainingset[intrain,]
+testing_split &lt;- trainingset[-intrain,]
+</code></pre>
 
 <pre><code class="r">set.seed(1234)
 library(caret)
@@ -383,7 +378,7 @@ for (k in methods){
 resamps&lt;-resamples(RL)
 </code></pre>
 
-<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-5"/> </p>
+<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-7"/> </p>
 
 <pre><code class="r">accuracyResult[-1,]
 </code></pre>
@@ -408,11 +403,7 @@ C4.5 has one tuning paraneter - C. We&#39;ll use it</p>
 C45Grid &lt;-  expand.grid(C = seq(0.2,0.3,0.01))
 #set cross validation
 ctrl &lt;- trainControl(method = &quot;cv&quot;, number = 10)
-if (file.exists(&quot;C45_tuning.rda&quot;)){
-  load(&quot;C45_tuning.rda&quot;)
-} else {
-  C45_CV &lt;- train(subset(training_split,select=-c(classe)),training_split$classe,method = &quot;J48&quot;,trControl = ctrl,tuneGrid = C45Grid)
-}
+C45_CV &lt;- train(subset(training_split,select=-c(classe)),training_split$classe,method = &quot;J48&quot;,trControl = ctrl,tuneGrid = C45Grid)
 </code></pre>
 
 <pre><code class="r">C45_CV
@@ -432,20 +423,20 @@ if (file.exists(&quot;C45_tuning.rda&quot;)){
 ## Resampling results across tuning parameters:
 ## 
 ##   C    Accuracy  Kappa  Accuracy SD  Kappa SD
-##   0.2  1         0.9    0.005        0.006   
-##   0.2  1         0.9    0.005        0.006   
-##   0.2  1         0.9    0.005        0.006   
-##   0.2  1         0.9    0.005        0.006   
-##   0.2  1         0.9    0.005        0.006   
-##   0.2  1         0.9    0.005        0.006   
-##   0.3  1         0.9    0.005        0.006   
-##   0.3  1         0.9    0.005        0.006   
-##   0.3  1         0.9    0.005        0.006   
-##   0.3  1         0.9    0.005        0.006   
-##   0.3  1         0.9    0.005        0.006   
+##   0.2  1         0.9    0.007        0.008   
+##   0.2  1         0.9    0.007        0.008   
+##   0.2  1         0.9    0.007        0.008   
+##   0.2  1         0.9    0.007        0.009   
+##   0.2  1         0.9    0.007        0.009   
+##   0.2  1         0.9    0.007        0.009   
+##   0.3  1         0.9    0.007        0.009   
+##   0.3  1         0.9    0.007        0.009   
+##   0.3  1         0.9    0.007        0.009   
+##   0.3  1         0.9    0.007        0.009   
+##   0.3  1         0.9    0.007        0.009   
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
-## The final value used for the model was C = 0.3.
+## The final value used for the model was C = 0.
 </code></pre>
 
 <p><strong>calculate out of sample error</strong></p>
@@ -460,36 +451,36 @@ confusionMatrix(predict,testing_split$classe)
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1083   11    2    7    2
-##          B   15  715   16    6    7
-##          C    7   14  655   22    5
-##          D    7   10    9  600    5
-##          E    4    9    2    8  702
+##          A 1095   17    2    7    2
+##          B    8  725   16   12    5
+##          C    5    8  642   16    7
+##          D    3    4   22  600   10
+##          E    5    5    2    8  697
 ## 
 ## Overall Statistics
-##                                        
-##                Accuracy : 0.957        
-##                  95% CI : (0.95, 0.963)
-##     No Information Rate : 0.284        
-##     P-Value [Acc &gt; NIR] : &lt;2e-16       
-##                                        
-##                   Kappa : 0.946        
-##  Mcnemar&#39;s Test P-Value : 0.231        
+##                                         
+##                Accuracy : 0.958         
+##                  95% CI : (0.951, 0.964)
+##     No Information Rate : 0.284         
+##     P-Value [Acc &gt; NIR] : &lt;2e-16        
+##                                         
+##                   Kappa : 0.947         
+##  Mcnemar&#39;s Test P-Value : 0.0545        
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             0.970    0.942    0.958    0.933    0.974
-## Specificity             0.992    0.986    0.985    0.991    0.993
-## Pos Pred Value          0.980    0.942    0.932    0.951    0.968
-## Neg Pred Value          0.988    0.986    0.991    0.987    0.994
+## Sensitivity             0.981    0.955    0.939    0.933    0.967
+## Specificity             0.990    0.987    0.989    0.988    0.994
+## Pos Pred Value          0.975    0.946    0.947    0.939    0.972
+## Neg Pred Value          0.993    0.989    0.987    0.987    0.993
 ## Prevalence              0.284    0.193    0.174    0.164    0.184
-## Detection Rate          0.276    0.182    0.167    0.153    0.179
-## Detection Prevalence    0.282    0.193    0.179    0.161    0.185
-## Balanced Accuracy       0.981    0.964    0.971    0.962    0.983
+## Detection Rate          0.279    0.185    0.164    0.153    0.178
+## Detection Prevalence    0.286    0.195    0.173    0.163    0.183
+## Balanced Accuracy       0.986    0.971    0.964    0.961    0.980
 </code></pre>
 
-<p>looks like ins testing split we get the result similar to cross-validation. And we have 95.86% confidence that our accuracy is higher than 97%. We will use this model for future predictions</p>
+<p>looks like ins testing split we get the result similar to cross-validation. And we have 95 confidence that our accuracy is higher than 95%. We will use this model for future predictions</p>
 
 </body>
 

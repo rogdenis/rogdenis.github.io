@@ -1,6 +1,9 @@
 Prediction Assignment Writeup
 ========================================================
-
+```{r echo=FALSE}
+library(knitr)
+options(digits=3)
+```
 Our goal is to train the model that predicts classe of activity and use it to predict activity in the testing data frame. We get the inspiration from process described on the caret web page http://topepo.github.io/caret/training.html and the lectures.
 
 So, our steps will be:
@@ -15,6 +18,7 @@ So, our steps will be:
 **obtaining the data**
 
 ```{r cache=TRUE}
+
 library(RCurl)
 
 if(!file.exists("pml-training.csv")){
@@ -117,11 +121,7 @@ C4.5 has one tuning paraneter - C. We'll use it
 C45Grid <-  expand.grid(C = seq(0.2,0.3,0.01))
 #set cross validation
 ctrl <- trainControl(method = "cv", number = 10)
-if (file.exists("C45_tuning.rda")){
-  load("C45_tuning.rda")
-} else {
-  C45_CV <- train(subset(training_split,select=-c(classe)),training_split$classe,method = "J48",trControl = ctrl,tuneGrid = C45Grid)
-}
+C45_CV <- train(subset(training_split,select=-c(classe)),training_split$classe,method = "J48",trControl = ctrl,tuneGrid = C45Grid)
 
 ```
 
